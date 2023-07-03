@@ -16,12 +16,23 @@ const httpServer = http.createServer(app);
 const wsWerver = new Server(httpServer);
 
 wsWerver.on("connection", (socket) => {
+    socket.onAny((event) => {
+        console.log(`Socket Event : ${event}`);
+    });
     //emit and on first argument has to be the same name(string)
     socket.on("enter_room", (roomName, done) => {
-        console.log(roomName);
-        setTimeout(() => {
-            done("Hello from Backend");
-        },2000);
+        socket.join(roomName);
+        done();
+        socket.to(roomName).emit("welcome");
+    });
+    socket.on("disconnecting", () => {
+        socket.rooms.forEach((room) => {
+            socket.to(room).emit("bye");
+        });
+    });
+    socket.on("new_message", (msg, room, done) => {
+        socket.to(room).emit("new_message", msg);
+        done();
     });
 });
 
