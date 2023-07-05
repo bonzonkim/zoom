@@ -16,23 +16,27 @@ const httpServer = http.createServer(app);
 const wsWerver = new Server(httpServer);
 
 wsWerver.on("connection", (socket) => {
+    socket["nickname"] = "Jone Doe"
     socket.onAny((event) => {
         console.log(`Socket Event : ${event}`);
     });
-    //emit and on first argument has to be the same name(string)
+    //"emit" and "on" first argument has to be the same name(string) event의 이름
     socket.on("enter_room", (roomName, done) => {
         socket.join(roomName);
         done();
-        socket.to(roomName).emit("welcome");
+        socket.to(roomName).emit("welcome", socket.nickname);
     });
     socket.on("disconnecting", () => {
         socket.rooms.forEach((room) => {
-            socket.to(room).emit("bye");
+            socket.to(room).emit("bye", socket.nickname);
         });
     });
     socket.on("new_message", (msg, room, done) => {
-        socket.to(room).emit("new_message", msg);
+        socket.to(room).emit("new_message", `${socket.nickname}: ${msg}`);
         done();
+    });
+    socket.on("nickname", (nickname) => {
+        socket["nickname"] = nickname;
     });
 });
 
