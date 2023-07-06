@@ -13,9 +13,24 @@ app.get("/*", (_req,res) => res.redirect("/"));
 const handleListen = () => console.log(`Listening on http://localhost:3000`);
 
 const httpServer = http.createServer(app);
-const wsWerver = new Server(httpServer);
+const wsServer = new Server(httpServer);
 
-wsWerver.on("connection", (socket) => {
+function publicRooms(){
+    const {
+        sockets: {
+        adapter: {sids, rooms},
+        },
+    } = wsServer;
+    const publicRooms = [];
+    rooms.forEach((_, key) => {
+        if(sids.get(key) === undefined){
+            publicRooms.push(key);
+        }
+    })
+    return publicRooms;
+}
+
+wsServer.on("connection", (socket) => {
     socket["nickname"] = "Jone Doe"
     socket.onAny((event) => {
         console.log(`Socket Event : ${event}`);
@@ -25,12 +40,16 @@ wsWerver.on("connection", (socket) => {
         socket.join(roomName);
         done();
         socket.to(roomName).emit("welcome", socket.nickname);
+        wsServer.sockets.emit("room_change", publicRooms());
     });
     socket.on("disconnecting", () => {
         socket.rooms.forEach((room) => {
             socket.to(room).emit("bye", socket.nickname);
         });
     });
+    socket.on("disconnect", () => {
+        wsServer.sockets.emit("room_change", publicRooms());
+    })
     socket.on("new_message", (msg, room, done) => {
         socket.to(room).emit("new_message", `${socket.nickname}: ${msg}`);
         done();
